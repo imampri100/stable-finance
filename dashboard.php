@@ -37,7 +37,7 @@
         <div class="logo">App Name / Logo</div>
         <ul class="nav-menu">
             <a href="#" class="nav-item">Dashboard</a>
-            <a href="inex.php" class="nav-item active">Income & Expense</a>
+            <a href="index.php" class="nav-item active">Income & Expense</a>
             <a href="planner.php" class="nav-item">Budget Planner</a>
             <a href="goals.php" class="nav-item">Saving Goals</a>
             <a href="manager.php" class="nav-item">Debt Manager</a>
