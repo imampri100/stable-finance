@@ -68,7 +68,8 @@ function db_migrate()
         year INT NOT NULL,
         collected_amount BIGINT NOT NULL,
         remaining_amount BIGINT NOT NULL,
-        target_amount BIGINT NOT NULL
+        target_amount BIGINT NOT NULL,
+        percentage FLOAT NOT NULL
     )";
 
     if (mysqli_query($conn, $budgetSql)) {
@@ -95,6 +96,27 @@ function db_migrate()
 //        echo "Table Saving created successfully";
     } else {
         error_log("Error creating table Saving: " . $conn->error);
+    }
+
+    // Create Debt table
+    $debtSql = "CREATE TABLE IF NOT EXISTS Debt (
+        id CHAR(36) PRIMARY KEY NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        name VARCHAR(100) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        collected_amount BIGINT NOT NULL,
+        remaining_amount BIGINT NOT NULL,
+        target_amount BIGINT NOT NULL,
+        percentage FLOAT NOT NULL
+    )";
+
+    if (mysqli_query($conn, $debtSql)) {
+//        echo "Table Debt created successfully";
+    } else {
+        error_log("Error creating table Debt: " . $conn->error);
     }
 
     $has_migrated = true;

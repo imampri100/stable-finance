@@ -1,5 +1,6 @@
 version: '3.8'
 services:
+  # config web with hot reloading by inotify tools
   web:
     build:
       context: .
