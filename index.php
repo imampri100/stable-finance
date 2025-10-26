@@ -1,3 +1,12 @@
+<?php
+include 'db_connect.php';
+
+db_connect();
+db_migrate();
+
+db_close();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
