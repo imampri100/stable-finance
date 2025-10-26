@@ -1,10 +1,10 @@
 <?php
 include 'db_connect.php';
+global $conn;
 
 db_connect();
 db_migrate();
 
-db_close();
 ?>
 
 <!DOCTYPE html>
@@ -505,46 +505,47 @@ db_close();
             
             <!-- 
             <?php
-                // PHP code to fetch data from the database and echo table rows
-                // $conn = new mysqli($servername, $username, $password, $dbname);
-                // $sql = "SELECT date, type, category, description, nominal FROM transactions ORDER BY date DESC";
-                // $result = $conn->query($sql);
-                // while($row = $result->fetch_assoc()) {
-                //     echo "<div class='table-row'>
-                //             <div class='table-cell'>{$row['date']}</div>
-                //             <div class='table-cell'>{$row['type']}</div>
-                //             <div class='table-cell'>{$row['category']}</div>
-                //             <div class='table-cell'>{$row['description']}</div>
-                //             <div class='table-cell'>Rp {$row['nominal']}</div>
-                //             <div class='table-cell'>
-                //                 <div class='action-icons'>
-                //                     <div class='action-icon'>
-                //                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                //                             <eye width='16' height='16' fill='none' stroke='currentColor' stroke-width='2'>
-                //                                 <path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path>
-                //                                 <circle cx='12' cy='12' r='3'></circle>
-                //                             </eye>
-                //                         </svg>
-                //                     </div>
-                //                     <div class='action-icon'>
-                //                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                //                             <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path>
-                //                             <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z'></path>
-                //                         </svg>
-                //                     </div>
-                //                     <div class='action-icon'>
-                //                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                //                             <path d='M3 6h18'></path>
-                //                             <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6'></path>
-                //                             <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'></path>
-                //                             <line x1='10' y1='11' x2='10' y2='17'></line>
-                //                             <line x1='14' y1='11' x2='14' y2='17'></line>
-                //                         </svg>
-                //                     </div>
-                //                 </div>
-                //             </div>
-                //         </div>";
-                // }
+                include 'repository/transaction_repository.php';
+
+                $transaction_repository = new TransactionRepository($conn);
+
+                $result = $transaction_repository->getAll();
+                foreach ($result as $row) {
+                     echo "<div class='table-row'>
+                             <div class='table-cell'>{$row['date']}</div>
+                             <div class='table-cell'>{$row['type']}</div>
+                             <div class='table-cell'>{$row['category']}</div>
+                             <div class='table-cell'>{$row['description']}</div>
+                             <div class='table-cell'>Rp {$row['amount']}</div>
+                             <div class='table-cell'>
+                                 <div class='action-icons'>
+                                     <div class='action-icon'>
+                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                             <eye width='16' height='16' fill='none' stroke='currentColor' stroke-width='2'>
+                                                 <path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path>
+                                                 <circle cx='12' cy='12' r='3'></circle>
+                                             </eye>
+                                         </svg>
+                                     </div>
+                                     <div class='action-icon'>
+                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                             <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path>
+                                             <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z'></path>
+                                         </svg>
+                                     </div>
+                                     <div class='action-icon'>
+                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                             <path d='M3 6h18'></path>
+                                             <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6'></path>
+                                             <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'></path>
+                                             <line x1='10' y1='11' x2='10' y2='17'></line>
+                                             <line x1='14' y1='11' x2='14' y2='17'></line>
+                                         </svg>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>";
+                 }
             ?>
             -->
             
@@ -853,3 +854,6 @@ db_close();
 </body>
 </html>
 
+<?php
+    db_close();
+?>
