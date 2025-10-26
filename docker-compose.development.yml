@@ -1,5 +1,6 @@
 version: '3.8'
 services:
+  # config web with hot reloading by inotify tools
   web:
     build:
       context: .
@@ -13,6 +14,12 @@ services:
       - mysql
     networks:
       - stable-finance-app
+    command: >
+      sh -c "service apache2 start &&
+             while inotifywait -r -e modify,create,delete /var/www/html;
+             do echo 'Changes detected, reloading...';
+             service apache2 reload;
+             done"
 
   mysql:
     image: mysql:8.0
