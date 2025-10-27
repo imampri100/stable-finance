@@ -8,7 +8,7 @@ class TransactionRepository extends BaseRepository {
 
     public function create($id, $transaction_date, $transaction_type, $transaction_category, $description, $amount) {
         $stmt = $this->conn->prepare("
-            INSERT INTO transaction (id, transaction_date, transaction_type, transaction_category, description, amount)
+            INSERT INTO Transaction (id, transaction_date, transaction_type, transaction_category, description, amount)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
         $stmt->bind_param("sssssd", $id, $transaction_date, $transaction_type, $transaction_category, $description, $amount);
@@ -17,7 +17,7 @@ class TransactionRepository extends BaseRepository {
 
     public function update($id, $transaction_date, $transaction_type, $transaction_category, $description, $amount) {
         $stmt = $this->conn->prepare("
-            UPDATE transaction 
+            UPDATE Transaction 
             SET transaction_date=?, transaction_type=?, transaction_category=?, description=?, amount=? 
             WHERE id=? AND deleted_at IS NULL
         ");
