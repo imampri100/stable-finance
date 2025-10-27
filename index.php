@@ -1,10 +1,38 @@
 <?php
 include 'db_connect.php';
+include 'repository/transaction_repository.php';
+include 'constant/transaction_constant.php';
+
 global $conn;
 
 db_connect();
 db_migrate();
 
+$transaction_repository = new TransactionRepository($conn);
+
+$result = $transaction_repository->getAll();
+
+$total_income = 0;
+$total_expense = 0;
+$total_balance = 0;
+
+foreach ($result as $transaction) {
+    if ($transaction["transaction_type"] == TRANSACTION_TYPE_INCOME) {
+        $total_income += $transaction['amount'];
+        $total_balance += $transaction['amount'];
+    } else {
+        $total_expense += $transaction['amount'];
+        $total_balance -= $transaction['amount'];
+    }
+}
+
+
+$total_data = count($result);
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$per_page = isset($_GET['size']) ? (int)$_GET['size'] : 10;
+$total_pages = ceil($total_data/$per_page);
+$start_order = ($current_page*$per_page)-$per_page;
+$end_order = ($current_page*$per_page);
 ?>
 
 <!DOCTYPE html>
@@ -437,22 +465,19 @@ db_migrate();
         </div>
         
         <div class="stats-container">
-            <!-- Total Income: SELECT SUM(amount) FROM transactions WHERE type = 'income' -->
             <div class="stat-card">
                 <div class="stat-title">Total Income</div>
-                <div class="stat-value">Rp50.000.000</div>
+                <div class="stat-value">Rp<?php echo number_format($total_income) ?></div>
             </div>
             
-            <!-- Total Expense: SELECT SUM(amount) FROM transactions WHERE type = 'expense' -->
             <div class="stat-card">
                 <div class="stat-title">Total Expense</div>
-                <div class="stat-value">Rp10.000.000</div>
+                <div class="stat-value">Rp<?php echo number_format($total_expense) ?></div>
             </div>
             
-            <!-- Total Balance: Total Income - Total Expense -->
             <div class="stat-card">
                 <div class="stat-title">Total Balance</div>
-                <div class="stat-value">Rp40.000.000</div>
+                <div class="stat-value">Rp<?php echo number_format($total_balance) ?></div>
             </div>
         </div>
         
@@ -503,318 +528,67 @@ db_migrate();
                 <div>Action</div>
             </div>
             
-            <!-- 
             <?php
-                include 'repository/transaction_repository.php';
+                foreach ($result as $row):
+                    $date = date_create($row['transaction_date']);
+                    $dateFormatted = date_format($date,'d-m-Y');
 
-                $transaction_repository = new TransactionRepository($conn);
-
-                $result = $transaction_repository->getAll();
-                foreach ($result as $row) {
-                     echo "<div class='table-row'>
-                             <div class='table-cell'>{$row['date']}</div>
-                             <div class='table-cell'>{$row['type']}</div>
-                             <div class='table-cell'>{$row['category']}</div>
-                             <div class='table-cell'>{$row['description']}</div>
-                             <div class='table-cell'>Rp {$row['amount']}</div>
-                             <div class='table-cell'>
-                                 <div class='action-icons'>
-                                     <div class='action-icon'>
-                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                                             <eye width='16' height='16' fill='none' stroke='currentColor' stroke-width='2'>
-                                                 <path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path>
-                                                 <circle cx='12' cy='12' r='3'></circle>
-                                             </eye>
-                                         </svg>
-                                     </div>
-                                     <div class='action-icon'>
-                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                                             <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path>
-                                             <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z'></path>
-                                         </svg>
-                                     </div>
-                                     <div class='action-icon'>
-                                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
-                                             <path d='M3 6h18'></path>
-                                             <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6'></path>
-                                             <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'></path>
-                                             <line x1='10' y1='11' x2='10' y2='17'></line>
-                                             <line x1='14' y1='11' x2='14' y2='17'></line>
-                                         </svg>
-                                     </div>
+                    $amountFormatted = number_format($row['amount']);
+            ?>
+                     <div class='table-row'>
+                         <div class='table-cell'><?php echo $dateFormatted ?></div>
+                         <div class='table-cell'><?php echo $row['transaction_type'] ?></div>
+                         <div class='table-cell'><?php echo $row['transaction_category'] ?></div>
+                         <div class='table-cell'><?php echo $row['description'] ?></div>
+                         <div class='table-cell'>Rp<?php echo $amountFormatted ?></div>
+                         <div class='table-cell'>
+                             <div class='action-icons'>
+                                 <div class='action-icon'>
+                                     <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                         <eye width='16' height='16' fill='none' stroke='currentColor' stroke-width='2'>
+                                             <path d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'></path>
+                                             <circle cx='12' cy='12' r='3'></circle>
+                                         </eye>
+                                     </svg>
+                                 </div>
+                                 <div class='action-icon'>
+                                     <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                         <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path>
+                                         <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z'></path>
+                                     </svg>
+                                 </div>
+                                 <div class='action-icon'>
+                                     <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>
+                                         <path d='M3 6h18'></path>
+                                         <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6'></path>
+                                         <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'></path>
+                                         <line x1='10' y1='11' x2='10' y2='17'></line>
+                                         <line x1='14' y1='11' x2='14' y2='17'></line>
+                                     </svg>
                                  </div>
                              </div>
-                         </div>";
-                 }
-            ?>
-            -->
-            
-            <div class="table-row">
-                <div class="table-cell">29 Sep 2025</div>
-                <div class="table-cell">Budget</div>
-                <div class="table-cell">Groceries</div>
-                <div class="table-cell">Monthly Shopping</div>
-                <div class="table-cell">Rp 1.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
+                         </div>
+                     </div>
+            <?php endforeach; ?>
+
+            <div class="pagination">
+                <div class="page-size">
+                    <select class="page-size-select" id="page-size-select" onchange="window.location.href='?size='+this.value;">
+                        <option value="10" <?= ($per_page == 10) ? 'selected' : '' ?>>10</option>
+                        <option value="20" <?= ($per_page == 20) ? 'selected' : '' ?>>20</option>
+                        <option value="50" <?= ($per_page == 50) ? 'selected' : '' ?>>50</option>
+                        <option value="100" <?= ($per_page == 100) ? 'selected' : '' ?>>100</option>
+                    </select>
+                    <label for="page-size-select">Show <?php echo $start_order ?> - <?php echo $end_order ?> from <?php echo $total_data ?> data</label>
+                </div>
+                <div class="pagination-controls">
+                    <?php if ($current_page > 1): ?> <a href="?page=<?php $current_page = $current_page - 1 ?>&size=<?php echo $per_page ?>" class="page-number">&lt;</a> <?php endif; ?>
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <a href="?page=<?= $i ?>&size=<?php echo $per_page ?>" class="page-number <?php echo ($i == $current_page) ? 'active' : '' ?>"><?php echo $i ?></a>
+                    <?php endfor; ?>
+                    <?php if ($current_page > 1 and $current_page != $total_pages): ?> <a href="?page=<?php $current_page = $current_page + 1 ?>&size=<?php echo $per_page ?>" class="page-number">&gt;</a> <?php endif; ?>
                 </div>
             </div>
-            
-            <div class="table-row">
-                <div class="table-cell">29 Sep 2025</div>
-                <div class="table-cell">Loan</div>
-                <div class="table-cell">Car Installment</div>
-                <div class="table-cell">Pay Car Installment</div>
-                <div class="table-cell">Rp 2.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-row">
-                <div class="table-cell">29 Sep 2025</div>
-                <div class="table-cell">Budget</div>
-                <div class="table-cell">Others</div>
-                <div class="table-cell">Buy Snacks</div>
-                <div class="table-cell">Rp 1.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-row">
-                <div class="table-cell">29 Sep 2025</div>
-                <div class="table-cell">Saving</div>
-                <div class="table-cell">Tuition Fee</div>
-                <div class="table-cell">Pay Tuition Fee</div>
-                <div class="table-cell">Rp 5.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-row">
-                <div class="table-cell">28 Sep 2025</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Main Salary</div>
-                <div class="table-cell">Rp 10.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-row">
-                <div class="table-cell">28 Sep 2025</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Freelance Salary</div>
-                <div class="table-cell">Rp 3.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="table-row">
-                <div class="table-cell">28 Sep 2025</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Income</div>
-                <div class="table-cell">Refund From John Doe</div>
-                <div class="table-cell">Rp 3.000.000</div>
-                <div class="table-cell">
-                    <div class="action-icons">
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <eye width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </eye>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 4a2.121 2.121 0 0 1-3-3L14.5 6.5a2.121 2.121 0 0 1 3 3z"></path>
-                            </svg>
-                        </div>
-                        <div class="action-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="pagination">
-            <div class="page-size">
-                <select class="page-size-select">
-                    <option>10</option>
-                    <option>20</option>
-                    <option>50</option>
-                    <option>100</option>
-                </select>
-                <span>Show 1 - 10 from 8 data</span>
-            </div>
-            <div class="pagination-controls">
-                <div class="page-number">&lt;</div>
-                <div class="page-number active">1</div>
-                <div class="page-number">2</div>
-                <div class="page-number">3</div>
-                <div class="page-number">...</div>
-                <div class="page-number">11</div>
-                <div class="page-number">&gt;</div>
-            </div>
-        </div>
     </div>
 
     <script>
