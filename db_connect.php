@@ -1,4 +1,6 @@
 <?php
+include_once 'repository/user_repository.php';
+include_once 'constant/role_constant.php';
 
 $conn = null;
 $has_migrated = false;
@@ -36,6 +38,41 @@ function db_migrate()
 
     if ($has_migrated) {
         return;
+    }
+
+    // Create User table
+    $userSql = "CREATE TABLE IF NOT EXISTS User (
+        id CHAR(36) PRIMARY KEY NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        email VARCHAR(100) NOT NULL,
+        password VARCHAR(1000) NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        role VARCHAR(30) NOT NULL,
+        is_active TINYINT(1) DEFAULT 0
+    )";
+
+    if (mysqli_query($conn, $userSql)) {
+//        echo "Table User created successfully";
+    } else {
+        error_log("Error creating table User: " . $conn->error);
+    }
+
+    // Create Session table
+    $sessionSql = "CREATE TABLE IF NOT EXISTS Session (
+        id CHAR(36) PRIMARY KEY NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        user_id CHAR(36) NOT NULL,
+        expired_at TIMESTAMP
+    )";
+
+    if (mysqli_query($conn, $sessionSql)) {
+//        echo "Table Session created successfully";
+    } else {
+        error_log("Error creating table Session: " . $conn->error);
     }
 
     // Create Transaction table
@@ -120,6 +157,30 @@ function db_migrate()
     }
 
     $has_migrated = true;
+}
+
+function seed_admin() {
+    global $conn;
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $users = $user_repository->get_by_role(ROLE_ADMIN);
+    if (count($users) == 0) {
+        $user_repository->create(generateUUID(), "admin@mail.com", hash('sha256', 'password'), 'Admin', ROLE_ADMIN, 1);
+    }
+    db_close();
+}
+
+function seed_user() {
+    global $conn;
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $users = $user_repository->get_by_role(ROLE_USER);
+    if (count($users) == 0) {
+        $user_repository->create(generateUUID(), "user@mail.com", hash('sha256', 'password'), 'User', ROLE_USER, 1);
+    }
+    db_close();
 }
 
 function db_close() {

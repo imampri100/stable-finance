@@ -1,5 +1,5 @@
 <?php
-include 'base_repository.php';
+include_once 'base_repository.php';
 
 class TransactionRepository extends BaseRepository {
     public function __construct($conn) {
