@@ -8,7 +8,7 @@ global $conn;
 
 session_start();
 
-if (isset($_SESSION['username'])) {
+if (isset($_SESSION['session_id'])) {
     header("Location: index.php");
     exit();
 }
@@ -106,7 +106,7 @@ if (isset($_POST['submit'])) {
                 <label class="form-label" for="password">Your password</label>
                 <div class="input-wrapper">
                     <input type="password" id="password" placeholder="Password" name="password" required>
-                    <span class="password-toggle" onclick="togglePassword('password')">Hide</span>
+                    <span class="password-toggle" onclick="togglePassword('password')">Show</span>
                 </div>
                 <div class="forgot-password">
                     <a href="#">Forget your password</a>

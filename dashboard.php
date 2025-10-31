@@ -72,7 +72,7 @@
                             </svg>
                             Settings
                         </a>
-                        <a href="#" class="dropdown-item">
+                        <a href="logout.php" class="dropdown-item">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                                 <polyline points="16 17 21 12 16 7"></polyline>
@@ -212,13 +212,13 @@
                 dropdownMenu.classList.remove('show');
             }
         });
-        
+
         // Close dropdown when clicking on menu items
         document.querySelectorAll('.dropdown-item').forEach(item => {
             item.addEventListener('click', function() {
                 dropdownMenu.classList.remove('show');
-                // In a real application, you would handle the navigation here
-                alert('Navigation would happen here in a real application.');
+                // // In a real application, you would handle the navigation here
+                // alert('Navigation would happen here in a real application.');
             });
         });
     </script>

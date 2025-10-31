@@ -220,7 +220,7 @@
             padding-bottom: 8px;   
         }
         .goals-card-detail {
-            font-size: 18;
+            font-size: 18px;
             /* font-weight: bold; */
             color: #333;
             padding-bottom: 8px;

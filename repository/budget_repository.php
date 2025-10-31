@@ -6,12 +6,12 @@ class BudgetRepository extends BaseRepository {
         parent::__construct($conn, "Budget");
     }
 
-    public function create($id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage) {
+    public function create($id, $user_id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage) {
         $stmt = $this->conn->prepare("
-            INSERT INTO Budget (id, name, month, year, collected_amount, remaining_amount, target_amount, percentage)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Budget (id, user_id, name, month, year, collected_amount, remaining_amount, target_amount, percentage)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("ssiidddi", $id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage);
+        $stmt->bind_param("sssiidddi", $id, $user_id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage);
         return $stmt->execute();
     }
 
@@ -22,6 +22,48 @@ class BudgetRepository extends BaseRepository {
             WHERE id=? AND deleted_at IS NULL
         ");
         $stmt->bind_param("ssiiddds", $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
+        return $stmt->execute();
+    }
+
+    public function get_by_user_id($user_id) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Budget 
+            WHERE user_id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("s", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function get_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Budget 
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    public function delete_by_user_id($user_id) {
+        $stmt = $this->conn->prepare("
+            UPDATE Budget 
+            SET deleted_at=NOW() 
+            WHERE user_id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("s", $user_id);
+        return $stmt->execute();
+    }
+
+    public function delete_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            UPDATE Budget 
+            SET deleted_at=NOW() 
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
         return $stmt->execute();
     }
 }
