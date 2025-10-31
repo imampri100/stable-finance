@@ -49,7 +49,7 @@ if ($user["role"] != ROLE_USER){
 // get transactions data
 db_connect();
 $transaction_repository = new TransactionRepository($conn);
-$result = $transaction_repository->get_all();
+$result = $transaction_repository->get_by_user_id($user['id']);
 db_close();
 
 $total_income = 0;

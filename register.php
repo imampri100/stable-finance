@@ -8,7 +8,7 @@ global $conn;
 
 session_start();
 
-if (isset($_SESSION['username'])) {
+if (isset($_SESSION['session_id'])) {
     header("Location: index.php");
     exit();
 }
@@ -42,7 +42,7 @@ if (isset($_POST['submit'])) {
 
     db_connect();
     $user_repository = new UserRepository($conn);
-    $user_repository->create(generateUUID(), $email, hash('sha256', $password), $name, ROLE_USER, 0);
+    $user_repository->create(generateUUID(), $email, hash('sha256', $password), $name, ROLE_USER, 1);
     db_close();
 
     echo "<script>
@@ -103,7 +103,7 @@ if (isset($_POST['submit'])) {
                 <label class="form-label">Create password</label>
                 <div class="input-wrapper">
                     <input type="password" id="password" placeholder="Password" name="password" required>
-                    <span class="password-toggle" onclick="togglePassword('password')">Hide</span>
+                    <span class="password-toggle" onclick="togglePassword('password')">Show</span>
                 </div>
             </div>
             
@@ -111,7 +111,7 @@ if (isset($_POST['submit'])) {
                 <label class="form-label">Confirm password</label>
                 <div class="input-wrapper">
                     <input type="password" id="confirm-password" placeholder="Password" name="confirm_password" required>
-                    <span class="password-toggle" onclick="togglePassword('confirm-password')">Hide</span>
+                    <span class="password-toggle" onclick="togglePassword('confirm-password')">Show</span>
                 </div>
             </div>
             

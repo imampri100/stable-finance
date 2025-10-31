@@ -39,5 +39,40 @@ class SessionRepository extends BaseRepository
         $stmt->bind_param("s", $id);
         return $stmt->execute();
     }
+
+    public function get_by_id($id)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Session
+            WHERE id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("s", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    public function get_by_user_id($user_id)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Session
+            WHERE user_id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("s", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function delete_by_user_id($user_id)
+    {
+        $stmt = $this->conn->prepare("
+            UPDATE Session
+            SET deleted_at=CURRENT_TIMESTAMP
+            WHERE user_id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("s", $user_id);
+        return $stmt->execute();
+    }
 }
 ?>
