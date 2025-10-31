@@ -22,14 +22,14 @@ class BaseRepository
         $this->table = $table;
     }
 
-    public function getAll()
+    public function get_all()
     {
         $sql = "SELECT * FROM {$this->table} WHERE deleted_at IS NULL ORDER BY created_at DESC";
         $result = $this->conn->query($sql);
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getById($id)
+    public function get_by_id($id)
     {
         $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = ? AND deleted_at IS NULL");
         $stmt->bind_param("s", $id);

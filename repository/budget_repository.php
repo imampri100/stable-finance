@@ -1,4 +1,5 @@
 <?php
+include_once 'base_repository.php';
 
 class BudgetRepository extends BaseRepository {
     public function __construct($conn) {

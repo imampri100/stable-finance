@@ -355,13 +355,13 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo">App Name / Logo</div>
+        <div class="logo">Stable Finance</div>
         <ul class="nav-menu">
             <a href="dashboard.php" class="nav-item">Dashboard</a>
-            <a href="index.php" class="nav-item active">Income & Expense</a>
-            <a href="planner.php" class="nav-item active">Budget Planner</a>
+            <a href="income_expense.php" class="nav-item">Income & Expense</a>
+            <a href="planner.php" class="nav-item">Budget Planner</a>
             <a href="goals.php" class="nav-item">Saving Goals</a>
-            <a href="#" class="nav-item">Debt Manager</a>
+            <a href="#" class="nav-item active">Debt Manager</a>
             <a href="financial.php" class="nav-item">Financial Health</a>
         </ul>
     </div>

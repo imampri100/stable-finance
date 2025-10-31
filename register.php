@@ -1,3 +1,58 @@
+<?php
+include_once 'db_connect.php';
+include_once 'repository/base_repository.php';
+include_once 'repository/session_repository.php';
+include_once 'repository/user_repository.php';
+
+global $conn;
+
+session_start();
+
+if (isset($_SESSION['username'])) {
+    header("Location: index.php");
+    exit();
+}
+
+if (isset($_POST['submit'])) {
+    $name = $_POST['name'];
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+    $confirmPassword = $_POST['confirm_password'];
+
+    if ($password != $confirmPassword) {
+        echo "<script>
+            alert('Password dan Confirm Password is not match. Please recheck!');
+            window.history.back();
+        </script>";
+        exit();
+    }
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $user_sql = $user_repository->get_by_email($email);
+    db_close();
+
+    if ($user_sql) {
+        echo "<script>
+            alert('Email is already registered. Please login!');
+            window.history.back();
+        </script>";
+        exit();
+    }
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $user_repository->create(generateUUID(), $email, hash('sha256', $password), $name, ROLE_USER, 0);
+    db_close();
+
+    echo "<script>
+        alert('Sign up success. Please login!');
+        window.location.href='index.php';
+    </script>";
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +61,7 @@
     <title>Create an Account</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
+        input[type="text"],
         input[type="email"],
         input[type="password"] {
             width: 100%;
@@ -15,7 +71,8 @@
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        
+
+        input[type="text"]:focus,
         input[type="email"]:focus,
         input[type="password"]:focus {
             outline: none;
@@ -27,21 +84,25 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>App Name / Logo</h1>
+            <h1>Stable Finance</h1>
             <h2>Create an account</h2>
-            <p>Already have an account? <a href="login.php">Log in</a></p>
         </div>
         
-        <form id="signup-form">
+        <form id="signup-form" method="POST">
+            <div class="form-group">
+                <label class="form-label">Enter your name</label>
+                <input type="text" placeholder="Name" name="name" required>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Enter your email</label>
-                <input type="email" placeholder="Email" required>
+                <input type="email" placeholder="Email" name="email" required>
             </div>
             
             <div class="form-group">
                 <label class="form-label">Create password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="password" placeholder="Password" required>
+                    <input type="password" id="password" placeholder="Password" name="password" required>
                     <span class="password-toggle" onclick="togglePassword('password')">Hide</span>
                 </div>
             </div>
@@ -49,16 +110,16 @@
             <div class="form-group">
                 <label class="form-label">Confirm password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="confirm-password" placeholder="Password" required>
+                    <input type="password" id="confirm-password" placeholder="Password" name="confirm_password" required>
                     <span class="password-toggle" onclick="togglePassword('confirm-password')">Hide</span>
                 </div>
             </div>
             
-            <button type="submit" class="submit-btn">Create an account</button>
+            <button type="submit" class="submit-btn" name="submit">Create an account</button>
         </form>
         
         <div class="login-link">
-            Already have an account? <a href="#">Log in</a>
+            Already have an account? <a href="login.php">Login</a>
         </div>
     </div>
 
@@ -68,18 +129,13 @@
             const toggle = input.parentElement.querySelector('.password-toggle');
             
             if (input.type === 'password') {
-                input.type = 'text';;
-                toggle.textContent = 'Show';
+                input.type = 'text';
+                toggle.textContent = 'Hide';
             } else {
                 input.type = 'password';
-                toggle.textContent = 'Hide';
+                toggle.textContent = 'Show';
             }
         }
-
-        document.getElementById('signup-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Success.');
-        });
     </script>
 </body>
 </html>
