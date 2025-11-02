@@ -25,8 +25,6 @@ class BudgetRepository extends BaseRepository {
         return $stmt->execute();
     }
 
-
-
     public function get_by_user_id($user_id) {
         $stmt = $this->conn->prepare("
             SELECT * FROM Budget 

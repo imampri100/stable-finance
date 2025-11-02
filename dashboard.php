@@ -158,6 +158,7 @@ db_close();
                 </div>
             </div>
         </div>
+
         <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-title">Total Income</div>

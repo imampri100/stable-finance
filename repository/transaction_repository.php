@@ -25,13 +25,23 @@ class TransactionRepository extends BaseRepository {
         return $stmt->execute();
     }
 
-    public function delete($id) {
+    public function delete_by_id($id) {
         $stmt = $this->conn->prepare("
             UPDATE Transaction
             SET deleted_at=CURRENT_TIMESTAMP
             WHERE id=? AND deleted_at IS NULL
         ");
         $stmt->bind_param("s", $id);
+        return $stmt->execute();
+    }
+
+    public function delete_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            UPDATE Transaction 
+            SET deleted_at=NOW() 
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
         return $stmt->execute();
     }
 
@@ -57,11 +67,22 @@ class TransactionRepository extends BaseRepository {
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
+    public function get_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Transaction
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
     //     // Ambil semua transaksi per user & periode (bulan, tahun)
     // public function get_by_user_and_period($user_id, $month, $year) {
-    //     $sql = "SELECT * FROM Transaction 
-    //             WHERE user_id = ? 
-    //               AND MONTH(transaction_date) = ? 
+    //     $sql = "SELECT * FROM Transaction
+    //             WHERE user_id = ?
+    //               AND MONTH(transaction_date) = ?
     //               AND YEAR(transaction_date) = ?";
     //     $stmt = $this->conn->prepare($sql);
     //     $stmt->bind_param("iii", $user_id, $month, $year);
@@ -73,11 +94,11 @@ class TransactionRepository extends BaseRepository {
 
     // // Hitung total income per user & periode
     // public function get_total_income($user_id, $month, $year) {
-    //     $sql = "SELECT SUM(amount) as total_income 
-    //             FROM Transaction 
-    //             WHERE user_id = ? 
+    //     $sql = "SELECT SUM(amount) as total_income
+    //             FROM Transaction
+    //             WHERE user_id = ?
     //               AND transaction_category = 'income'
-    //               AND MONTH(transaction_date) = ? 
+    //               AND MONTH(transaction_date) = ?
     //               AND YEAR(transaction_date) = ?";
     //     $stmt = $this->conn->prepare($sql);
     //     $stmt->bind_param("iii", $user_id, $month, $year);
@@ -88,11 +109,11 @@ class TransactionRepository extends BaseRepository {
 
     // // Hitung total expense per user & periode
     // public function get_total_expense($user_id, $month, $year) {
-    //     $sql = "SELECT SUM(amount) as total_expense 
-    //             FROM Transaction 
-    //             WHERE user_id = ? 
+    //     $sql = "SELECT SUM(amount) as total_expense
+    //             FROM Transaction
+    //             WHERE user_id = ?
     //               AND transaction_category = 'expense'
-    //               AND MONTH(transaction_date) = ? 
+    //               AND MONTH(transaction_date) = ?
     //               AND YEAR(transaction_date) = ?";
     //     $stmt = $this->conn->prepare($sql);
     //     $stmt->bind_param("iii", $user_id, $month, $year);
@@ -152,22 +173,20 @@ class TransactionRepository extends BaseRepository {
     }
 
     public function get_expense_by_category($user_id) {
-    $sql = "SELECT transaction_category, description, SUM(amount) as total
-            FROM Transaction
-            WHERE user_id = ? AND transaction_category = 'expense'
-            GROUP BY description";
-    $stmt = $this->conn->prepare($sql);
+        $sql = "SELECT transaction_category, description, SUM(amount) as total
+                FROM Transaction
+                WHERE user_id = ? AND transaction_category = 'expense'
+                GROUP BY description";
+        $stmt = $this->conn->prepare($sql);
 
-    if (!$stmt) {
-        die("Prepare failed: " . $this->conn->error);
+        if (!$stmt) {
+            die("Prepare failed: " . $this->conn->error);
+        }
+
+        $stmt->bind_param("s", $user_id); // UUID string
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
-
-    $stmt->bind_param("s", $user_id); // UUID string
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return $result->fetch_all(MYSQLI_ASSOC);
-}
-
-
 }
 ?>

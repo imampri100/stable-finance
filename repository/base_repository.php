@@ -38,7 +38,7 @@ class BaseRepository
         return $result->fetch_assoc();
     }
 
-    public function delete($id)
+    public function delete_by_id($id)
     {
         $stmt = $this->conn->prepare("UPDATE {$this->table} SET deleted_at = NOW() WHERE id = ?");
         $stmt->bind_param("s", $id);
