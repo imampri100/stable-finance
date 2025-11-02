@@ -25,13 +25,23 @@ class TransactionRepository extends BaseRepository {
         return $stmt->execute();
     }
 
-    public function delete($id) {
+    public function delete_by_id($id) {
         $stmt = $this->conn->prepare("
             UPDATE Transaction
             SET deleted_at=CURRENT_TIMESTAMP
             WHERE id=? AND deleted_at IS NULL
         ");
         $stmt->bind_param("s", $id);
+        return $stmt->execute();
+    }
+
+    public function delete_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            UPDATE Transaction 
+            SET deleted_at=NOW() 
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
         return $stmt->execute();
     }
 
@@ -55,6 +65,17 @@ class TransactionRepository extends BaseRepository {
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function get_by_user_id_and_id($user_id, $id) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM Transaction
+            WHERE user_id=? AND id=? AND deleted_at IS NULL
+        ");
+        $stmt->bind_param("ss", $user_id, $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
     }
 }
 ?>

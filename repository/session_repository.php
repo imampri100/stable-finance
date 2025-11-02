@@ -29,7 +29,7 @@ class SessionRepository extends BaseRepository
         return $stmt->execute();
     }
 
-    public function delete($id)
+    public function delete_by_id($id)
     {
         $stmt = $this->conn->prepare("
             UPDATE Session
@@ -61,7 +61,7 @@ class SessionRepository extends BaseRepository
         $stmt->bind_param("s", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $result->fetch_assoc();
     }
 
     public function delete_by_user_id($user_id)

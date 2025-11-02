@@ -47,7 +47,7 @@ class UserRepository extends BaseRepository {
         return $stmt->execute();
     }
 
-    public function delete($id) {
+    public function delete_by_id($id) {
         $stmt = $this->conn->prepare("
             UPDATE User
             SET deleted_at=CURRENT_TIMESTAMP
