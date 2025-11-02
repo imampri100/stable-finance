@@ -25,6 +25,8 @@ class BudgetRepository extends BaseRepository {
         return $stmt->execute();
     }
 
+
+
     public function get_by_user_id($user_id) {
         $stmt = $this->conn->prepare("
             SELECT * FROM Budget 
@@ -66,6 +68,50 @@ class BudgetRepository extends BaseRepository {
         $stmt->bind_param("ss", $user_id, $id);
         return $stmt->execute();
     }
+
+    public function get_by_user($user_id)
+    {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM {$this->table}
+            WHERE deleted_at IS NULL AND user_id = ?
+            ORDER BY created_at DESC
+        ");
+        $stmt->bind_param("s", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function get_by_user_and_period($user_id, $month, $year)
+    {
+        $query = "
+            SELECT *
+            FROM Budget
+            WHERE user_id = ?
+            AND month = ?
+            AND year = ?
+            AND deleted_at IS NULL
+        ";
+
+        $stmt = $this->conn->prepare($query);
+        if (!$stmt) {
+            die("Query prepare failed: " . $this->conn->error);
+        }
+
+        $stmt->bind_param("sii", $user_id, $month, $year);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $budgets = [];
+        while ($row = $result->fetch_assoc()) {
+            $budgets[] = $row;
+        }
+
+        $stmt->close();
+        return $budgets;
+    }
+
+
 }
 
 ?>
