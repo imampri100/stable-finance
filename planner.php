@@ -1,3 +1,82 @@
+<?php
+include_once 'db_connect.php';
+include_once 'repository/budget_repository.php';
+include_once 'repository/session_repository.php';
+include_once 'repository/base_repository.php';
+include_once 'repository/user_repository.php';
+
+session_start();
+
+if (!isset($_SESSION['session_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+db_connect();
+global $conn;
+
+$session_repository = new SessionRepository($conn);
+$session = $session_repository->get_by_id($_SESSION['session_id']);
+$user_id = $session['user_id'];
+
+$budget_repository = new BudgetRepository($conn);
+
+// === FORM HANDLE ===
+if (isset($_POST['submit'])) {
+    $name = $_POST['name'];
+    $target_amount = floatval($_POST['target_amount']);
+    $month = intval($_POST['month']);
+    $year = intval($_POST['year']);
+
+    $id = generateUUID();
+    $collected_amount = 0;
+    $remaining_amount = $target_amount;
+    $percentage = 0;
+
+    // Insert ke repository
+    $result = $budget_repository->create(
+        $id,
+        $user_id,
+        $name,
+        $month,
+        $year,
+        $collected_amount,
+        $remaining_amount,
+        $target_amount,
+        $percentage
+    );
+
+    if ($result) {
+        echo "<script>alert('Budget added successfully!'); window.location.href='planner.php';</script>";
+        exit();
+    } else {
+        echo "<script>alert('Failed to add budget.'); window.history.back();</script>";
+        exit();
+    }
+}
+
+// === FILTER HANDLING ===
+$selected_year = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
+$selected_month = isset($_GET['month']) ? intval($_GET['month']) : date('n');
+
+// === QUERY DATA SESUAI FILTER ===
+$budgets = $budget_repository->get_by_user_and_period($user_id, $selected_month, $selected_year);
+
+// === HITUNG STATISTIK ===
+$total_budget = 0;
+$total_realization = 0;
+$total_left = 0;
+
+foreach ($budgets as $b) {
+    $total_budget += $b['target_amount'];
+    $total_realization += $b['collected_amount'];
+    $total_left += $b['remaining_amount'];
+}
+
+db_close();
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,13 +90,14 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
             display: flex;
             height: 100vh;
             background-color: #f5f7fa;
         }
-        
+
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #6c9bd8;
@@ -26,7 +106,7 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .logo {
             padding: 20px 30px;
             font-weight: bold;
@@ -34,12 +114,12 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             margin-bottom: 30px;
         }
-        
+
         .nav-menu {
             list-style: none;
             padding: 0 20px;
         }
-        
+
         .nav-item {
             padding: 15px 20px;
             cursor: pointer;
@@ -50,41 +130,42 @@
             color: white;
             display: block;
         }
-        
+
         .nav-item:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
-        
+
         .nav-item.active {
             background-color: rgba(255, 255, 255, 0.2);
         }
-        
+
+        /* Main Content */
         .main-content {
             flex: 1;
             padding: 30px;
             overflow-y: auto;
         }
-        
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
         }
-        
+
         .page-title {
             font-size: 28px;
             font-weight: bold;
             color: #333;
         }
-        
+
         .user-info {
             display: flex;
             align-items: center;
             gap: 10px;
             position: relative;
         }
-        
+
         .user-avatar {
             width: 40px;
             height: 40px;
@@ -96,11 +177,12 @@
             font-weight: bold;
             color: #333;
         }
-        
+
+        /* Dropdown */
         .dropdown {
             position: relative;
         }
-        
+
         .dropdown-toggle {
             display: flex;
             align-items: center;
@@ -110,11 +192,11 @@
             border-radius: 4px;
             transition: background-color 0.2s;
         }
-        
+
         .dropdown-toggle:hover {
             background-color: rgba(0, 0, 0, 0.1);
         }
-        
+
         .dropdown-menu {
             position: absolute;
             top: 100%;
@@ -129,13 +211,13 @@
             transform: translateY(-10px);
             transition: all 0.2s ease;
         }
-        
+
         .dropdown-menu.show {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
         }
-        
+
         .dropdown-item {
             padding: 12px 20px;
             display: flex;
@@ -145,23 +227,24 @@
             text-decoration: none;
             transition: background-color 0.2s;
         }
-        
+
         .dropdown-item:hover {
             background-color: #f5f7fa;
         }
-        
+
+        /* Filters */
         .filter-container {
             display: flex;
             gap: 20px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-        
+
         .filter-group {
             display: flex;
             gap: 10px;
         }
-        
+
         .filter-label {
             font-size: 14px;
             color: #666;
@@ -169,7 +252,7 @@
             display: flex;
             align-items: center;
         }
-        
+
         .filter-select {
             padding: 8px 12px;
             border: 1px solid #ddd;
@@ -178,14 +261,15 @@
             background-color: white;
             cursor: pointer;
         }
-        
+
+        /* Stats */
         .stats-container {
             display: flex;
             gap: 20px;
             margin-bottom: 30px;
             flex-wrap: wrap;
         }
-        
+
         .stat-card {
             background-color: #e6f2ff;
             padding: 20px;
@@ -193,72 +277,75 @@
             min-width: 200px;
             flex: 1;
         }
-        
+
         .stat-title {
             font-size: 16px;
             color: #666;
             margin-bottom: 10px;
         }
-        
+
         .stat-value {
             font-size: 24px;
             font-weight: bold;
             color: #333;
         }
-        
+
         .section-title {
             font-size: 20px;
             font-weight: bold;
             color: #333;
             margin-bottom: 20px;
         }
-        
+
+        /* Table */
         .table-container {
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            border: 1px solid #ddd;
+            font-family: 'Segoe UI', sans-serif;
         }
-        
-        .table-header {
+
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-container th {
             background-color: #6c9bd8;
             color: white;
-            padding: 12px 20px;
-            display: grid;
-            grid-template-columns: 1fr 2fr 2fr 3fr;
+            padding: 14px 18px;
             font-weight: bold;
+            text-align: left;
         }
-        
-        .table-row {
-            display: grid;
-            grid-template-columns: 1fr 2fr 2fr 3fr;
-            padding: 12px 20px;
+
+        .table-container td {
+            padding: 14px 18px;
             border-bottom: 1px solid #eee;
-            align-items: center;
+            color: #333;
         }
-        
-        .table-row:last-child {
-            border-bottom: none;
+
+        .table-container tbody tr:hover {
+            background-color: #f8f9fa;
+            transition: background 0.2s ease;
         }
-        
-        .table-cell {
-            padding: 0 5px;
-            word-break: break-word;
-        }
-        
+
         .progress-bar {
+            width: 100%;
             height: 8px;
             background-color: #ddd;
             border-radius: 4px;
             overflow: hidden;
             margin-top: 5px;
         }
-        
+
         .progress-fill {
             height: 100%;
-            background-color: #4A90E2;
+            background: linear-gradient(90deg, #4caf50, #2e7d32);
+            transition: width 0.4s ease;
         }
-        
+
         .add-button {
             padding: 8px 16px;
             background-color: #4A90E2;
@@ -271,62 +358,91 @@
             margin-top: 20px;
             float: right;
         }
-        
+
         .add-button:hover {
             background-color: #3A7BD5;
         }
-        
+
+        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 width: 60px;
             }
-            
+
             .logo {
                 padding: 20px;
                 text-align: center;
             }
-            
+
             .nav-menu {
                 padding: 0;
             }
-            
+
             .nav-item {
                 padding: 15px;
                 text-align: center;
             }
-            
+
             .nav-item span {
                 display: none;
             }
-            
+
             .main-content {
                 padding: 20px;
             }
-            
-            .filter-container {
-                flex-direction: column;
-            }
-            
+
+            .filter-container,
             .stats-container {
                 flex-direction: column;
             }
-            
-            .table-header,
-            .table-row {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-            
-            .table-cell:nth-child(4) {
-                display: none;
-            }
-            
-            .add-button {
-                width: 100%;
-                float: none;
-                margin-top: 10px;
+
+            .table-container th,
+            .table-container td {
+                padding: 10px 12px;
             }
         }
+        .budget-form-inline {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .budget-form-inline label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .budget-form-inline input,
+        .budget-form-inline select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .budget-form-inline button {
+            padding: 8px 16px;
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .budget-form-inline button:hover {
+            background-color: #3A7BD5;
+        }
+
+
     </style>
+
 </head>
 <body>
     <div class="sidebar">
@@ -381,49 +497,140 @@
             </div>
         </div>
         
+      
+
+        <!-- === FILTER UI === -->
         <div class="filter-container">
-            <div class="filter-group">
-                <div class="filter-label">Tahun</div>
-                <select class="filter-select">
-                    <option>2025</option>
-                    <option>2024</option>
-                    <option>2023</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <div class="filter-label">Bulan</div>
-                <select class="filter-select">
-                    <option>September</option>
-                    <option>August</option>
-                    <option>July</option>
-                    <option>June</option>
-                    <option>May</option>
-                    <option>April</option>
-                    <option>March</option>
-                    <option>February</option>
-                    <option>January</option>
-                </select>
-            </div>
+            <form method="GET" style="display: flex; gap: 20px; align-items: center;">
+                <div class="filter-group">
+                    <div class="filter-label">Tahun</div>
+                    <select class="filter-select" name="year" onchange="this.form.submit()">
+                        <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                            <option value="<?= $y ?>" <?= $y == $selected_year ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-label">Bulan</div>
+                    <select class="filter-select" name="month" onchange="this.form.submit()">
+                        <?php
+                        $months = [
+                            1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                            5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                            9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+                        ];
+                        foreach ($months as $num => $name): ?>
+                            <option value="<?= $num ?>" <?= $num == $selected_month ? 'selected' : '' ?>><?= $name ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </form>
         </div>
-        
+
+
+        <!-- === STATS SECTION === -->
         <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-title">Total Budget</div>
-                <div class="stat-value">Rp 10.000.000</div>
+                <div class="stat-value">Rp <?= number_format($total_budget, 0, ',', '.') ?></div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Realization</div>
-                <div class="stat-value">Rp 5.000.000</div>
+                <div class="stat-value">Rp <?= number_format($total_realization, 0, ',', '.') ?></div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Budget Left</div>
-                <div class="stat-value">Rp 5.000.000</div>
+                <div class="stat-value">Rp <?= number_format($total_left, 0, ',', '.') ?></div>
             </div>
         </div>
+
         
         <div class="section-title">Detail Budget</div>
-        
+
+
+        <form method="POST" class="budget-form-inline">
+            <label for="name">Budget Name</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="target_amount">Target Amount</label>
+            <input type="number" id="target_amount" name="target_amount" required>
+
+            <label for="month">Month</label>
+            <select id="month" name="month" required>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+
+            <label for="year">Year</label>
+            <select id="year" name="year" required>
+                <?php 
+                    $currentYear = date('Y');
+                    for ($i = $currentYear; $i >= $currentYear - 5; $i--) {
+                        echo "<option value='$i'>$i</option>";
+                    }
+                ?>
+            </select>
+
+            <button type="submit" name="submit">Add Budget</button>
+        </form>
+
+
+
+
+        <div class="section-title">Detail Budget</div>
+
         <div class="table-container">
+            <table>
+                <thead class="table-header">
+                    <tr>
+                        <th>No</th>
+                        <th>Name</th>
+                        <th>Ratio</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($budgets)): ?>
+                        <?php $no = 1; foreach ($budgets as $b): ?>
+                            <?php
+                                $percentage = min(100, round(($b['collected_amount'] / max($b['target_amount'], 1)) * 100, 2));
+                            ?>
+                            <tr class="table-row">
+                                <td class="table-cell"><?= $no++ ?></td>
+                                <td class="table-cell"><?= htmlspecialchars($b['name']) ?></td>
+                                <td class="table-cell">
+                                    Rp <?= number_format($b['collected_amount'], 0, ',', '.') ?> /
+                                    Rp <?= number_format($b['target_amount'], 0, ',', '.') ?>
+                                </td>
+                                <td class="table-cell">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: <?= $percentage ?>%;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr class="no-data">
+                            <td class="table-cell" colspan="4">No budget data yet.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+
+
+        <!-- <div class="table-container">
             <div class="table-header">
                 <div>No</div>
                 <div>Name</div>
@@ -476,8 +683,11 @@
             </div>
         </div>
         
-        <button class="add-button">+ Add Data</button>
+        <button class="add-button">+ Add Data</button> -->
     </div>
+
+    
+
 
     <script>
         // Add interactivity to navigation items

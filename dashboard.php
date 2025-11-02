@@ -1,3 +1,77 @@
+<?php
+include_once 'db_connect.php';
+include_once 'repository/budget_repository.php';
+include_once 'repository/session_repository.php';
+include_once 'repository/base_repository.php';
+include_once 'repository/user_repository.php';
+include_once 'repository/transaction_repository.php'; // repository untuk transaksi
+
+session_start();
+
+if (!isset($_SESSION['session_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+db_connect();
+global $conn;
+
+// Ambil session & user
+$session_repository = new SessionRepository($conn);
+$session = $session_repository->get_by_id($_SESSION['session_id']);
+$user_id = $session['user_id'];
+
+// Repositories
+$budget_repository = new BudgetRepository($conn);
+$transaction_repository = new TransactionRepository($conn);
+
+// Filter bulan & tahun
+$selected_year = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
+$selected_month = isset($_GET['month']) ? intval($_GET['month']) : date('n');
+
+// Ambil data budget dan transaksi
+$budgets = $budget_repository->get_by_user($user_id);
+$transactions = $transaction_repository->get_by_user($user_id);
+
+// Ambil total income & expense langsung dari repository
+$total_income = $transaction_repository->get_total_income($user_id);
+$total_expense = $transaction_repository->get_total_expense($user_id);
+// Data expense per kategori untuk donut chart
+$expense_by_category = $transaction_repository->get_expense_by_category($user_id);
+$total_expense_for_chart = array_sum(array_column($expense_by_category, 'total'));
+
+foreach ($expense_by_category as $i => $cat) {
+    $cat['percentage'] = $total_expense_for_chart > 0 
+        ? ($cat['total'] / $total_expense_for_chart) * 100 
+        : 0;
+    $expense_by_category[$i] = $cat;
+}
+
+// Hitung balance
+$current_balance = $total_income - $total_expense;
+
+// Ambil semua budget user
+$budgets = $budget_repository->get_by_user($user_id);
+
+// Hitung progress saving (total_realization / total_budget)
+$total_budget = 0;
+$total_realization = 0;
+foreach ($budgets as $b) {
+    $total_budget += $b['target_amount'];
+    $total_realization += $b['collected_amount'];
+}
+$saving_progress = $total_budget > 0 ? round(($total_realization / $total_budget) * 100) : 0;
+
+
+$current_balance = $total_income - $total_expense;
+
+$all_colors = ['#4A90E2','#6cd8a3','#ff6b6b','#ffc107','#8e44ad','#e67e22'];
+$colors = array_slice($all_colors, 0, count($expense_by_category));
+
+
+db_close();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -84,8 +158,32 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-title">Total Income</div>
+                <div class="stat-value">Rp<?php echo number_format($total_income, 0, ',', '.'); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Expense</div>
+                <div class="stat-value">Rp<?php echo number_format($total_expense, 0, ',', '.'); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Current Balance</div>
+                <div class="stat-value">Rp<?php echo number_format($current_balance, 0, ',', '.'); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Saving Progress</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: <?php echo $saving_progress; ?>%;"></div>
+                    </div>
+                    <span><?php echo $saving_progress; ?>%</span>
+                </div>
+            </div>
+        </div>
+                
+        <!-- <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-title">Total Income</div>
                 <div class="stat-value">Rp45.000.000</div>
@@ -108,7 +206,7 @@
                 </div>
             </div>
         </div>
-        
+         -->
         <div class="chart-container">
             <div class="chart-card">
                 <div class="chart-title">Income vs Expense</div>
@@ -160,7 +258,7 @@
                 </div>
             </div>
             
-            <div class="chart-card">
+            <!-- <div class="chart-card">
                 <div class="chart-title">Expense by Category</div>
                 <div class="donut-chart">
                     <div class="donut-circle"></div>
@@ -183,6 +281,27 @@
                         <div class="donut-legend-color" style="background-color: #ffc107;"></div>
                         <span>Others</span>
                     </div>
+                </div>
+            </div> -->
+            <div class="chart-card">
+                <div class="chart-title">Expense by Category</div>
+                <div class="donut-chart">
+                    <div class="donut-circle"></div>
+                    <div class="donut-center">100%</div> <!-- total center tetap 100% -->
+                </div>
+                <div class="donut-legend">
+                    <?php
+                    foreach ($expense_by_category as $i => $cat) {
+                        $color = $colors[$i];
+                        $percentage = $total_expense_for_chart > 0 
+                            ? round(($cat['total'] / $total_expense_for_chart) * 100)
+                            : 0;
+                        echo '<div class="donut-legend-item">';
+                        echo '<div class="donut-legend-color" style="background-color: '.$color.';"></div>';
+                        echo '<span>'.htmlspecialchars($cat['description']).' (Rp'.number_format($cat['total'],0,',','.').', '.$percentage.'%)</span>';
+                        echo '</div>';
+                    }
+                    ?>
                 </div>
             </div>
         </div>
