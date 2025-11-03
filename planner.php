@@ -19,6 +19,20 @@ $session_repository = new SessionRepository($conn);
 $session = $session_repository->get_by_id($_SESSION['session_id']);
 $user_id = $session['user_id'];
 
+// check user
+$user_repository = new UserRepository($conn);
+$user = $user_repository->get_by_id($session["user_id"]);
+if (!$user || $user["is_active"] != 1){
+    header("Location: login.php");
+    session_destroy();
+    exit();
+}
+
+if ($user["role"] != ROLE_USER){
+    header("Location: index.php");
+    exit();
+}
+
 $budget_repository = new BudgetRepository($conn);
 
 // === FORM HANDLE ===
@@ -445,65 +459,22 @@ db_close();
 
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">Stable Finance</div>
-        <ul class="nav-menu">
-            <a href="dashboard.php" class="nav-item">Dashboard</a>
-            <a href="income_expense.php" class="nav-item">Income & Expense</a>
-            <a href="#" class="nav-item active">Budget Planner</a>
-            <a href="goals.php" class="nav-item">Saving Goals</a>
-            <a href="manager.php" class="nav-item">Debt Manager</a>
-            <a href="financial.php" class="nav-item">Financial Health</a>
-        </ul>
-    </div>
-    
+    <?php
+    include_once 'layout/sidebar_user_layout.php';
+    sidebarUserLayout(2);
+    ?>
+
     <div class="main-content">
-        <div class="header">
-            <div class="page-title">Budget Planner</div>
-            <div class="user-info">
-                <div class="user-avatar">JD</div>
-                <div class="dropdown">
-                    <div class="dropdown-toggle" id="dropdown-toggle">
-                        <span>John Doe</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 9l6 6 6-6"></path>
-                        </svg>
-                    </div>
-                    <div class="dropdown-menu" id="dropdown-menu">
-                        <a href="profile.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                            Profile
-                        </a>
-                        <a href="settings.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                            </svg>
-                            Settings
-                        </a>
-                        <a href="logout.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
-                            Sign out
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-      
+        <?php
+        include_once 'layout/header_layout.php';
+        headerLayout('Budget Planner', $user);
+        ?>
 
         <!-- === FILTER UI === -->
         <div class="filter-container">
             <form method="GET" style="display: flex; gap: 20px; align-items: center;">
                 <div class="filter-group">
-                    <div class="filter-label">Tahun</div>
+                    <div class="filter-label">Year</div>
                     <select class="filter-select" name="year" onchange="this.form.submit()">
                         <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
                             <option value="<?= $y ?>" <?= $y == $selected_year ? 'selected' : '' ?>><?= $y ?></option>
@@ -511,7 +482,7 @@ db_close();
                     </select>
                 </div>
                 <div class="filter-group">
-                    <div class="filter-label">Bulan</div>
+                    <div class="filter-label">Month</div>
                     <select class="filter-select" name="month" onchange="this.form.submit()">
                         <?php
                         $months = [

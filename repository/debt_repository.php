@@ -11,7 +11,7 @@ class DebtRepository extends BaseRepository {
             INSERT INTO Debt (id, user_id, name, start_date, end_date, collected_amount, remaining_amount, target_amount, percentage)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("ssssdddds", $id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage);
+        $stmt->bind_param("sssssiiid", $id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage);
         return $stmt->execute();
     }
 
@@ -21,7 +21,7 @@ class DebtRepository extends BaseRepository {
             SET name=?, start_date=?, end_date=?, collected_amount=?, remaining_amount=?, target_amount=?, percentage=? 
             WHERE id=? AND deleted_at IS NULL
         ");
-        $stmt->bind_param("sssdddds", $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
+        $stmt->bind_param("sssiiids", $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
         return $stmt->execute();
     }
 

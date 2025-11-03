@@ -86,7 +86,10 @@ function db_migrate()
         transaction_type VARCHAR(30) NOT NULL,
         transaction_category VARCHAR(30) NOT NULL,
         description TEXT NOT NULL,
-        amount BIGINT NOT NULL
+        amount BIGINT NOT NULL,
+        budget_id CHAR(36),
+        saving_id CHAR(36),
+        debt_id CHAR(36)
     )";
 
     if (mysqli_query($conn, $transactionSql)) {
@@ -129,7 +132,8 @@ function db_migrate()
         end_date DATE NOT NULL,
         collected_amount BIGINT NOT NULL,
         remaining_amount BIGINT NOT NULL,
-        target_amount BIGINT NOT NULL
+        target_amount BIGINT NOT NULL,
+        percentage FLOAT NOT NULL
     )";
 
     if (mysqli_query($conn, $savingSql)) {

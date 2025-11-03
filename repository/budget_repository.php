@@ -11,7 +11,7 @@ class BudgetRepository extends BaseRepository {
             INSERT INTO Budget (id, user_id, name, month, year, collected_amount, remaining_amount, target_amount, percentage)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("sssiidddi", $id, $user_id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage);
+        $stmt->bind_param("sssiiiiid", $id, $user_id, $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage);
         return $stmt->execute();
     }
 
@@ -21,7 +21,7 @@ class BudgetRepository extends BaseRepository {
             SET name=?, month=?, year=?, collected_amount=?, remaining_amount=?, target_amount=?, percentage=? 
             WHERE id=? AND deleted_at IS NULL
         ");
-        $stmt->bind_param("ssiiddds", $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
+        $stmt->bind_param("siiiiids", $name, $month, $year, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
         return $stmt->execute();
     }
 

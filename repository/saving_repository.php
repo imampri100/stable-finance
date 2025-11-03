@@ -6,22 +6,22 @@ class SavingRepository extends BaseRepository {
         parent::__construct($conn, "Saving");
     }
 
-    public function create($id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount) {
+    public function create($id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage) {
         $stmt = $this->conn->prepare("
-            INSERT INTO Saving (id, user_id, name, start_date, end_date, collected_amount, remaining_amount, target_amount)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Saving (id, user_id, name, start_date, end_date, collected_amount, remaining_amount, target_amount, percentage)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("ssssddd", $id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount);
+        $stmt->bind_param("ssssiiid", $id, $user_id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage);
         return $stmt->execute();
     }
 
-    public function update($id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount) {
+    public function update($id, $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage) {
         $stmt = $this->conn->prepare("
             UPDATE Saving 
-            SET name=?, start_date=?, end_date=?, collected_amount=?, remaining_amount=?, target_amount=? 
+            SET name=?, start_date=?, end_date=?, collected_amount=?, remaining_amount=?, target_amount=?, percentage=? 
             WHERE id=? AND deleted_at IS NULL
         ");
-        $stmt->bind_param("sssddds", $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $id);
+        $stmt->bind_param("sssiiids", $name, $start_date, $end_date, $collected_amount, $remaining_amount, $target_amount, $percentage, $id);
         return $stmt->execute();
     }
 

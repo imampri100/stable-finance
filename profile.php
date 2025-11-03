@@ -49,33 +49,55 @@ if ($user["role"] != ROLE_USER){
     exit();
 }
 
-// get transaction data
-$transaction_id = isset($_GET['transaction_id']) ? (string)$_GET['transaction_id'] : null;
-if (!$transaction_id){
+// handle submit profile
+if (isset($_POST['submit-profile'])) {
+    $name = $_POST['name'];
+    $email = $_POST['email'];
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $update_result = $user_repository->update($user['id'], $email, $user['password'], $name, $user['role'], $user['is_active']);
+    db_close();
+
     echo "<script>
-        alert('Transaction ID does not exist');
+        alert('Edit profle success!');
         window.history.back();
-    </script>";;
+    </script>";
     exit();
 }
 
-db_connect();
-$transaction_repository = new TransactionRepository($conn);
-$transaction = $transaction_repository->get_by_user_id_and_id($user['id'],$transaction_id);
-db_close();
+// handle submit password
+if (isset($_POST['submit-password'])) {
+    $old_password = $_POST['old_password'];
+    if (hash('sha256', $old_password) != $user["password"]){
+        echo "<script>
+            alert('Old Password is wrong!');
+            window.history.back();
+        </script>";
+        exit();
+    }
 
-if (!$transaction){
+    $new_password = $_POST['new_password'];
+    $confirm_new_password = $_POST['confirm_new_password'];
+
+    if ($new_password != $confirm_new_password){
+        echo "<script>
+            alert('New Password and Confirm New Password is not matching!');
+            window.history.back();
+        </script>";
+        exit();
+    }
+
+    $new_password = hash('sha256', $new_password);
+
+    db_connect();
+    $user_repository = new UserRepository($conn);
+    $update_result = $user_repository->update($user['id'], $user['email'], $new_password, $user['name'], $user['role'], $user['is_active']);
+    db_close();
+
     echo "<script>
-        alert('Failed get transaction data');
+        alert('Edit password success!');
         window.history.back();
-    </script>";;
-    exit();
-}
-
-// handle submit
-if (isset($_POST['submit'])) {
-    echo "<script>
-        window.location.href='income_expense.php';
     </script>";
     exit();
 }
@@ -316,54 +338,65 @@ sidebarUserLayout(1);
 <div class="main-content">
     <?php
     include_once 'layout/header_layout.php';
-    headerLayout('Income & Expense', $user);
+    headerLayout('Profile', $user);
     ?>
 
     <div class="section-title">Edit Data</div>
 
-    <form id="add-transaction-form" method="POST">
+    <form id="add-profile-form" method="POST">
         <div class="form-grid">
             <div class="form-group">
-                <label class="form-label" for="type">
-                    Type
-                    <select class="type" id="type" name="type" disabled>
-                        <option value="<?php echo $transaction['transaction_type']; ?>"><?php echo $transaction['transaction_type']; ?></option>
-                    </select>
+                <label class="form-label" for="name">
+                    Name
+                    <input type="text" placeholder="Name" name="name" value="<?= $user['name'] ?>" required>
                 </label>
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="category">
-                    Category
-                    <select class="category" id="category" name="category" disabled>
-                        <option value="<?php echo $transaction['transaction_category']; ?>"><?php echo $transaction['transaction_category']; ?></option>
-                    </select>
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="description">
-                    Description
-                    <input type="text" placeholder="Description" name="description" value="<?php echo $transaction['description'] ?>" disabled>
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="nominal">
-                    Nominal (Rupiah)
-                    <input type="number" placeholder="Nominal" name="nominal" value="<?php echo $transaction['amount'] ?>" disabled>
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="date">
-                    Date
-                    <input type="date" placeholder="Date" name="date" value="<?php echo $transaction['transaction_date'] ?>" disabled>
+                <label class="form-label" for="email">
+                    Email
+                    <input type="text" placeholder="Email" name="email" value="<?= $user['email'] ?>" required>
                 </label>
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary" name="submit">Back</button>
+                <button type="submit" class="btn btn-primary" name="submit-profile">Save Profile</button>
+            </div>
+        </div>
+    </form>
+
+    <br/>
+    <br/>
+    <br/>
+
+    <form id="add-password-form" method="POST">
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="new_password">
+                    New Password
+                    <input type="password" id="new_password" placeholder="New Password" name="new_password" required>
+                </label>
+                <span class="password-toggle" onclick="togglePassword('new_password')">Show</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm_new_password">
+                    Confirm New Password
+                    <input type="password" id="confirm_new_password" placeholder="Confirm New Password" name="confirm_new_password" required>
+                </label>
+                <span class="password-toggle" onclick="togglePassword('confirm_new_password')">Show</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="old_password">
+                    Old Password
+                    <input type="password" id="old_password" placeholder="Old Password" name="old_password" required>
+                </label>
+                <span class="password-toggle" onclick="togglePassword('old_password')">Show</span>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" name="submit-password">Save Password</button>
             </div>
         </div>
     </form>
@@ -400,6 +433,19 @@ sidebarUserLayout(1);
                 dropdownMenu.classList.remove('show');
             });
         });
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const toggle = input.parentElement.querySelector('.password-toggle');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggle.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                toggle.textContent = 'Show';
+            }
+        }
     </script>
 </body>
 </html>
