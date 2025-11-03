@@ -56,6 +56,14 @@ $total_income = 0;
 $total_expense = 0;
 $total_balance = 0;
 
+$now_year = date('Y');
+$now_month = date('n');
+
+$selected_year = isset($_GET['year']) ? intval($_GET['year']) : $now_year;
+$selected_month = isset($_GET['month']) ? intval($_GET['month']) : $now_month;
+
+$temp_result = array();
+
 foreach ($result as $transaction) {
     if ($transaction["transaction_type"] == TRANSACTION_TYPE_INCOME) {
         $total_income += $transaction['amount'];
@@ -64,15 +72,37 @@ foreach ($result as $transaction) {
         $total_expense += $transaction['amount'];
         $total_balance -= $transaction['amount'];
     }
+
+    $is_match = true;
+    if ($selected_year != null){
+        $year = intval(date('Y', strtotime($transaction['transaction_date'])));
+        $is_match = $year == $selected_year;
+
+        if ($selected_month != null){
+            $month = intval(date('n', strtotime($transaction['transaction_date'])));
+            $is_match = $year == $selected_year && $month == $selected_month;
+        }
+    }
+
+    if ($is_match){
+        $temp_result[] = $transaction;
+    }
 }
 
-$total_data = count($result);
-$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$per_page = isset($_GET['size']) ? (int)$_GET['size'] : 10;
-$total_pages = ceil($total_data / $per_page);
-$start_order = ($current_page * $per_page) - $per_page;
-$end_order = min($total_data, ($current_page * $per_page));
+$result = $temp_result;
 
+$total_data = count($result);
+$per_page = isset($_GET['size']) ? max(1, (int)$_GET['size']) : 10;
+$total_pages = max(1, ceil($total_data / $per_page));
+
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($current_page < 1) $current_page = 1;
+if ($current_page > $total_pages) $current_page = $total_pages;
+
+$start_order = ($current_page - 1) * $per_page;
+$end_order = min($total_data, $start_order + $per_page);
+
+$result = array_slice($result, $start_order, $per_page);
 ?>
 
 <!DOCTYPE html>
@@ -398,7 +428,7 @@ $end_order = min($total_data, ($current_page * $per_page));
         .page-number:hover {
             background-color: #f5f7fa;
         }
-        
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 60px;
@@ -457,57 +487,16 @@ $end_order = min($total_data, ($current_page * $per_page));
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">Stable Finance</div>
-        <ul class="nav-menu">
-            <a href="dashboard.php" class="nav-item">Dashboard</a>
-            <a href="#" class="nav-item active">Income & Expense</a>
-            <a href="planner.php" class="nav-item">Budget Planner</a>
-            <a href="goals.php" class="nav-item">Saving Goals</a>
-            <a href="manager.php" class="nav-item">Debt Manager</a>
-            <a href="financial.php" class="nav-item">Financial Health</a>
-        </ul>
-    </div>
+    <?php
+        include_once 'layout/sidebar_user_layout.php';
+        sidebarUserLayout(1);
+    ?>
     
     <div class="main-content">
-        <div class="header">
-            <div class="page-title">Income & Expense</div>
-            <div class="user-info">
-                <div class="user-avatar">JD</div>
-                <div class="dropdown">
-                    <div class="dropdown-toggle" id="dropdown-toggle">
-                        <span>John Doe</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 9l6 6 6-6"></path>
-                        </svg>
-                    </div>
-                    <div class="dropdown-menu" id="dropdown-menu">
-                        <a href="profile.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                            Profile
-                        </a>
-                        <a href="settings.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                            </svg>
-                            Settings
-                        </a>
-                        <a href="logout.php" class="dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
-                            Sign out
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php
+            include_once 'layout/header_layout.php';
+            headerLayout('Income & Expense', $user);
+        ?>
         
         <div class="stats-container">
             <div class="stat-card">
@@ -529,35 +518,31 @@ $end_order = min($total_data, ($current_page * $per_page));
         <div class="section-title">Income and Expense History</div>
         
         <div class="controls">
-            <div class="filter-group">
-                <div class="filter-label">Filter:</div>
-                <select class="filter-select">
-                    <option>Month</option>
-                    <option>Week</option>
-                    <option>Year</option>
-                </select>
-                <select class="filter-select">
-                    <option>All Types</option>
-                    <option>Income</option>
-                    <option>Expense</option>
-                </select>
-                <select class="filter-select">
-                    <option>All Categories</option>
-                    <option>Groceries</option>
-                    <option>Tuition</option>
-                    <option>Rent</option>
-                    <option>Others</option>
-                </select>
-            </div>
-            
-            <div class="search-box">
-                <input type="text" class="search-input" placeholder="Search Here...">
-                <div class="search-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                </div>
+            <div class="filter-container">
+                <form method="GET" style="display: flex; gap: 20px; align-items: center;">
+                    <div class="filter-group">
+                        <div class="filter-label">Year</div>
+                        <select id="filter-year" class="filter-select" name="year" onchange="this.form.submit()">
+                            <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
+                                <option value="<?= $y ?>" <?= $y == $selected_year ? 'selected' : '' ?>><?= $y ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-label">Month</div>
+                        <select id="filter-month" class="filter-select" name="month" onchange="this.form.submit()">
+                            <?php
+                            $months = [
+                                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+                            ];
+                            foreach ($months as $num => $name): ?>
+                                <option value="<?= $num ?>" <?= $num == $selected_month ? 'selected' : '' ?>><?= $name ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </form>
             </div>
             
             <a href="income_expense_add.php" class="add-button">+ Add Data</a>
@@ -622,20 +607,26 @@ $end_order = min($total_data, ($current_page * $per_page));
 
             <div class="pagination">
                 <div class="page-size">
-                    <select class="page-size-select" id="page-size-select" onchange="window.location.href='?size='+this.value;">
+                    <select class="page-size-select" id="page-size-select" onchange="window.location.href='?year=<?= $selected_year ?>&month=<?= $selected_month ?>&page=1&size='+this.value;">
                         <option value="10" <?= ($per_page == 10) ? 'selected' : '' ?>>10</option>
                         <option value="20" <?= ($per_page == 20) ? 'selected' : '' ?>>20</option>
                         <option value="50" <?= ($per_page == 50) ? 'selected' : '' ?>>50</option>
                         <option value="100" <?= ($per_page == 100) ? 'selected' : '' ?>>100</option>
                     </select>
-                    <label for="page-size-select">Show <?php echo $start_order ?> - <?php echo $end_order ?> from <?php echo $total_data ?> data</label>
+                    <label for="page-size-select">Show <?= $start_order + 1 ?> - <?= $end_order ?> of <?= $total_data ?> data</label>
                 </div>
                 <div class="pagination-controls">
-                    <?php if ($current_page > 1): ?> <a href="?page=<?php $current_page = $current_page - 1 ?>&size=<?php echo $per_page ?>" class="page-number">&lt;</a> <?php endif; ?>
+                    <?php if ($current_page > 1): ?>
+                        <a href="?year=<?= $selected_year ?>&month=<?= $selected_month ?>&page=<?= $current_page - 1 ?>&size=<?= $per_page ?>" class="page-number">&lt;</a>
+                    <?php endif; ?>
+
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <a href="?page=<?= $i ?>&size=<?php echo $per_page ?>" class="page-number <?php echo ($i == $current_page) ? 'active' : '' ?>"><?php echo $i ?></a>
+                        <a href="?year=<?= $selected_year ?>&month=<?= $selected_month ?>&page=<?= $i ?>&size=<?= $per_page ?>" class="page-number <?= ($i == $current_page) ? 'active' : '' ?>"><?= $i ?></a>
                     <?php endfor; ?>
-                    <?php if ($current_page > 1 and $current_page != $total_pages): ?> <a href="?page=<?php $current_page = $current_page + 1 ?>&size=<?php echo $per_page ?>" class="page-number">&gt;</a> <?php endif; ?>
+
+                    <?php if ($current_page < $total_pages): ?>
+                        <a href="?year=<?= $selected_year ?>&month=<?= $selected_month ?>&page=<?= $current_page + 1 ?>&size=<?= $per_page ?>" class="page-number">&gt;</a>
+                    <?php endif; ?>
                 </div>
             </div>
     </div>

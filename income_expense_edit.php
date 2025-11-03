@@ -72,6 +72,9 @@ if (!$transaction){
     exit();
 }
 
+// define as old_transaction
+$old_transaction = $transaction;
+
 // get type options
 $types = [
     TRANSACTION_TYPE_INCOME,
@@ -84,34 +87,187 @@ $budget_repository = new BudgetRepository($conn);
 $budgets = $budget_repository->get_by_user_id($user['id']);
 db_close();
 
+$budget_categories = [];
+foreach ($budgets as $budget){
+    $formatted_amount = "Rp" . number_format($budget["target_amount"]);
+
+    $concat_date = new DateTime("{$budget["year"]}-{$budget["month"]}-01");
+    $month_year_formatted = date_format($concat_date,'M Y');
+
+    $budget_categories[] = [
+        'id' => $budget["id"],
+        'name' => "{$budget["name"]} - {$formatted_amount} ($month_year_formatted)",
+        'original_name' => $budget["name"],
+    ];
+}
+
 db_connect();
 $saving_repository = new SavingRepository($conn);
 $savings = $saving_repository->get_by_user_id($user['id']);
 db_close();
+
+$saving_categories = [];
+foreach ($savings as $saving){
+    $formatted_amount = "Rp" . number_format($saving["target_amount"]);
+
+    $start_date = date_create($saving['start_date']);
+    $start_date_formatted = date_format($saving,'d-m-Y');
+
+    $end_date = date_create($saving['end_date']);
+    $end_date_formatted = date_format($saving,'d-m-Y');
+
+    $saving_categories[] = [
+        'id' => $saving["id"],
+        'name' => "{$saving["name"]} - $formatted_amount ($start_date_formatted-$end_date_formatted)",
+        'original_name' => $saving["name"],
+    ];
+}
 
 db_connect();
 $debt_repository = new DebtRepository($conn);
 $debts = $debt_repository->get_by_user_id($user['id']);
 db_close();
 
+$debt_categories = [];
+foreach ($debts as $debt){
+    $formatted_amount = "Rp" . number_format($debt["target_amount"]);
+
+    $start_date = date_create($debt['start_date']);
+    $start_date_formatted = date_format($debt,'d-m-Y');
+
+    $end_date = date_create($debt['end_date']);
+    $end_date_formatted = date_format($debt,'d-m-Y');
+
+    $debt_categories[] = [
+        'id' => $debt["id"],
+        'name' => "{$debt["name"]} - $formatted_amount ($start_date_formatted-$end_date_formatted)",
+        'original_name' => $debt["name"],
+    ];
+}
+
 $categories_by_type = [
-    TRANSACTION_TYPE_INCOME => [TRANSACTION_TYPE_INCOME],
-    TRANSACTION_TYPE_BUDGET => $budgets,
-    TRANSACTION_TYPE_SAVING => $savings,
-    TRANSACTION_TYPE_DEBT => $debts,
+    TRANSACTION_TYPE_INCOME => [[
+        'id' => "0000-0000-0000-0000",
+        'name' => TRANSACTION_TYPE_INCOME,
+        "value" => TRANSACTION_TYPE_INCOME,
+    ]],
+    TRANSACTION_TYPE_BUDGET => $budget_categories,
+    TRANSACTION_TYPE_SAVING => $saving_categories,
+    TRANSACTION_TYPE_DEBT => $debt_categories,
 ];
 
 // handle submit
 if (isset($_POST['submit'])) {
     $type = $_POST['type'];
-    $category = $_POST['category'];
+    $category_id = $_POST['category_id'];
     $description = $_POST['description'];
     $nominal = $_POST['nominal'];
     $date = $_POST['date'];
 
+    // edit transaction
+    $category_name = '';
+    $budget_id = null;
+    $saving_id = null;
+    $debt_id = null;
+
+    if ($type == TRANSACTION_TYPE_INCOME){
+        $category_name = TRANSACTION_TYPE_INCOME;
+    } else {
+        foreach ($categories_by_type[$type] as $cat){
+            if ($cat['id'] == $category_id){
+                $category_name = $cat['original_name'];
+
+                switch ($type) {
+                    case TRANSACTION_TYPE_BUDGET:
+                        $budget_id = $cat['id'];
+                        break;
+                    case TRANSACTION_TYPE_SAVING:
+                        $saving_id = $cat['id'];
+                        break;
+                    case TRANSACTION_TYPE_DEBT:
+                        $debt_id = $cat['id'];
+                        break;
+                }
+
+                break;
+            }
+        }
+    }
+
     db_connect();
     $transaction_repository = new TransactionRepository($conn);
-    $transaction = $transaction_repository->update($transaction['id'], $date, $type, $category, $description, $nominal);
+    $update_result = $transaction_repository->update($transaction['id'], $date, $type, $category_name, $description, $nominal, $budget_id, $saving_id, $debt_id);
+    db_close();
+
+    if (!$update_result) {
+        echo "<script>
+            alert('Failed update transaction: message: ' . $update_result->error)
+            window.history.back();
+        </script>";
+        exit();
+    }
+
+    // update old budget
+    if ($old_transaction["budget_id"] != null){
+        db_connect();
+        $budget_repository = new BudgetRepository($conn);
+        $budget = $budget_repository->get_by_user_id_and_id($user['id'], $old_transaction["budget_id"]);
+
+        // calculating
+        $budget['collected_amount'] = $budget['collected_amount'] - $old_transaction["amount"];
+        $budget['remaining_amount'] = $budget['remaining_amount'] + $old_transaction["amount"];
+        if (!empty($budget['collected_amount']) && $budget['collected_amount'] > 0) {
+            $budget['percentage'] = ($budget['collected_amount'] / $budget['target_amount']) * 100;
+        } else {
+            $budget['percentage'] = 0;
+        }
+
+        $budget_repository->update($budget['id'], $budget['name'], $budget['month'], $budget['year'], $budget['collected_amount'], $budget['remaining_amount'], $budget['target_amount'], $budget['percentage']);
+        db_close();
+    }
+
+    // update old saving
+    if ($old_transaction["saving_id"] != null){
+        db_connect();
+        $saving_repository = new SavingRepository($conn);
+        $saving = $saving_repository->get_by_user_id_and_id($user['id'], $old_transaction["saving_id"]);
+
+        // calculating
+        $saving['collected_amount'] = $saving['collected_amount'] - $old_transaction["amount"];
+        $saving['remaining_amount'] = $saving['remaining_amount'] + $old_transaction["amount"];
+        if (!empty($saving['collected_amount']) && $saving['collected_amount'] > 0) {
+            $saving['percentage'] = ($saving['collected_amount'] / $saving['target_amount']) * 100;
+        } else {
+            $saving['percentage'] = 0;
+        }
+
+        $saving_repository->update($saving['id'], $saving['name'], $saving['start_date'], $saving['end_date'], $saving['collected_amount'], $saving['remaining_amount'], $saving['target_amount'], $saving['percentage']);
+        db_close();
+    }
+
+    // update old debt
+    if ($old_transaction["debt_id"] != null){
+        db_connect();
+        $debt_repository = new DebtRepository($conn);
+        $debt = $debt_repository->get_by_user_id_and_id($user['id'], $old_transaction["debt_id"]);
+
+        // calculating
+        $debt['collected_amount'] = $debt['collected_amount'] - $old_transaction["amount"];
+        $debt['remaining_amount'] = $debt['remaining_amount'] + $old_transaction["amount"];
+        if (!empty($debt['collected_amount']) && $debt['collected_amount'] > 0) {
+            $debt['percentage'] = ($debt['collected_amount'] / $debt['target_amount']) * 100;
+        } else {
+            $debt['percentage'] = 0;
+        }
+
+        $debt_repository->update($debt['id'], $debt['name'], $debt['start_date'], $debt['end_date'], $debt['collected_amount'], $debt['remaining_amount'], $debt['target_amount'], $debt['percentage']);
+        db_close();
+    }
+
+    // get updated transaction
+    db_connect();
+    $transaction_repository = new TransactionRepository($conn);
+    $transaction = $transaction_repository->get_by_user_id_and_id($user['id'], $transaction['id']);
     db_close();
 
     if (!$transaction) {
@@ -120,6 +276,63 @@ if (isset($_POST['submit'])) {
             window.history.back();
         </script>";
         exit();
+    }
+
+    // update new budget
+    if ($transaction["budget_id"] != null){
+        db_connect();
+        $budget_repository = new BudgetRepository($conn);
+        $budget = $budget_repository->get_by_user_id_and_id($user['id'], $transaction["budget_id"]);
+
+        // calculating
+        $budget['collected_amount'] = $budget['collected_amount'] + $nominal;
+        $budget['remaining_amount'] = $budget['remaining_amount'] - $nominal;
+        if (!empty($budget['collected_amount']) && $budget['collected_amount'] > 0) {
+            $budget['percentage'] = ($budget['collected_amount'] / $budget['target_amount']) * 100;
+        } else {
+            $budget['percentage'] = 0;
+        }
+
+        $budget_repository->update($budget['id'], $budget['name'], $budget['month'], $budget['year'], $budget['collected_amount'], $budget['remaining_amount'], $budget['target_amount'], $budget['percentage']);
+        db_close();
+    }
+
+    // update new saving
+    if ($transaction["saving_id"] != null){
+        db_connect();
+        $saving_repository = new SavingRepository($conn);
+        $saving = $saving_repository->get_by_user_id_and_id($user['id'], $transaction["saving_id"]);
+
+        // calculating
+        $saving['collected_amount'] = $saving['collected_amount'] + $nominal;
+        $saving['remaining_amount'] = $saving['remaining_amount'] - $nominal;
+        if (!empty($saving['collected_amount']) && $saving['collected_amount'] > 0) {
+            $saving['percentage'] = ($saving['collected_amount'] / $saving['target_amount']) * 100;
+        } else {
+            $saving['percentage'] = 0;
+        }
+
+        $saving_repository->update($saving['id'], $saving['name'], $saving['start_date'], $saving['end_date'], $saving['collected_amount'], $saving['remaining_amount'], $saving['target_amount'], $saving['percentage']);
+        db_close();
+    }
+
+    // update new debt
+    if ($transaction["debt_id"] != null){
+        db_connect();
+        $debt_repository = new DebtRepository($conn);
+        $debt = $debt_repository->get_by_user_id_and_id($user['id'], $transaction["debt_id"]);
+
+        // calculating
+        $debt['collected_amount'] = $debt['collected_amount'] + $nominal;
+        $debt['remaining_amount'] = $debt['remaining_amount'] - $nominal;
+        if (!empty($debt['collected_amount']) && $debt['collected_amount'] > 0) {
+            $debt['percentage'] = ($debt['collected_amount'] / $debt['target_amount']) * 100;
+        } else {
+            $debt['percentage'] = 0;
+        }
+
+        $debt_repository->update($debt['id'], $debt['name'], $debt['start_date'], $debt['end_date'], $debt['collected_amount'], $debt['remaining_amount'], $debt['target_amount'], $debt['percentage']);
+        db_close();
     }
 
     echo "<script>
@@ -357,57 +570,16 @@ if (isset($_POST['submit'])) {
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="logo">Stable Finance</div>
-    <ul class="nav-menu">
-        <a href="dashboard.php" class="nav-item">Dashboard</a>
-        <a href="income_expense.php" class="nav-item active">Income & Expense</a>
-        <a href="planner.php" class="nav-item">Budget Planner</a>
-        <a href="goals.php" class="nav-item">Saving Goals</a>
-        <a href="manager.php" class="nav-item">Debt Manager</a>
-        <a href="financial.php" class="nav-item">Financial Health</a>
-    </ul>
-</div>
+<?php
+include_once 'layout/sidebar_user_layout.php';
+sidebarUserLayout(1);
+?>
 
 <div class="main-content">
-    <div class="header">
-        <div class="page-title">Income & Expense</div>
-        <div class="user-info">
-            <div class="user-avatar">JD</div>
-            <div class="dropdown">
-                <div class="dropdown-toggle" id="dropdown-toggle">
-                    <span>John Doe</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"></path>
-                    </svg>
-                </div>
-                <div class="dropdown-menu" id="dropdown-menu">
-                    <a href="profile.php" class="dropdown-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                        Profile
-                    </a>
-                    <a href="settings.php" class="dropdown-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                        Settings
-                    </a>
-                    <a href="logout.php" class="dropdown-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                        Sign out
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php
+    include_once 'layout/header_layout.php';
+    headerLayout('Income & Expense', $user);
+    ?>
 
     <div class="section-title">Edit Data</div>
 
@@ -426,16 +598,40 @@ if (isset($_POST['submit'])) {
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="category">
+                <label class="form-label" for="category_id">
                     Category
-                    <select class="category" id="category" name="category" required>
+                    <select class="category_id" id="category_id" name="category_id" required>
                         <option value="">- Select Category -</option>
                         <?php
                             $type = $transaction['transaction_type'];
                             if (!empty($categories_by_type[$type])) {
                                 foreach ($categories_by_type[$type] as $category_option) {
-                                    $selected = ($category_option == $transaction['transaction_category']) ? 'selected' : '';
-                                    echo "<option value=\"$category_option\" $selected>$category_option</option>";
+                                    $selected = '';
+
+                                    switch ($type) {
+                                        case TRANSACTION_TYPE_INCOME:
+                                            if ($transaction['transaction_category'] == TRANSACTION_TYPE_INCOME) {
+                                                $selected = 'selected';
+                                            }
+                                            break;
+                                        case TRANSACTION_TYPE_BUDGET:
+                                            if ($transaction['budget_id'] == $category_option['id']) {
+                                                $selected = 'selected';
+                                            }
+                                            break;
+                                        case TRANSACTION_TYPE_SAVING:
+                                            if ($transaction['saving_id'] == $category_option['id']) {
+                                                $selected = 'selected';
+                                            }
+                                            break;
+                                        case TRANSACTION_TYPE_DEBT:
+                                            if ($transaction['debt_id'] == $category_option['id']) {
+                                                $selected = 'selected';
+                                            }
+                                            break;
+                                    }
+
+                                    echo "<option value=\"{$category_option['id']}\" $selected>{$category_option['name']}</option>";
                                 }
                             }
                         ?>
@@ -505,7 +701,7 @@ if (isset($_POST['submit'])) {
         });
 
         const typeSelect = document.getElementById('type');
-        const categorySelect = document.getElementById('category');
+        const categorySelect = document.getElementById('category_id');
         const categoriesByType = <?php echo json_encode($categories_by_type); ?>;
 
         // Empty category selection and reset option if the type selection has been changed
@@ -519,8 +715,8 @@ if (isset($_POST['submit'])) {
             if (categoriesByType[selectedType]) {
                 categoriesByType[selectedType].forEach(cat => {
                     const option = document.createElement('option');
-                    option.value = cat;
-                    option.textContent = cat;
+                    option.value = cat['id'];
+                    option.textContent = cat['name'];
                     categorySelect.appendChild(option);
                 });
             }

@@ -6,22 +6,22 @@ class TransactionRepository extends BaseRepository {
         parent::__construct($conn, "Transaction");
     }
 
-    public function create($id, $user_id, $transaction_date, $transaction_type, $transaction_category, $description, $amount) {
+    public function create($id, $user_id, $transaction_date, $transaction_type, $transaction_category, $description, $amount, $budget_id = null, $saving_id = null, $debt_id = null) {
         $stmt = $this->conn->prepare("
-            INSERT INTO Transaction (id, user_id, transaction_date, transaction_type, transaction_category, description, amount)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Transaction (id, user_id, transaction_date, transaction_type, transaction_category, description, amount, budget_id, saving_id, debt_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("ssssssd", $id, $user_id, $transaction_date, $transaction_type, $transaction_category, $description, $amount);
+        $stmt->bind_param("ssssssdsss", $id, $user_id, $transaction_date, $transaction_type, $transaction_category, $description, $amount, $budget_id, $saving_id, $debt_id);
         return $stmt->execute();
     }
 
-    public function update($id, $transaction_date, $transaction_type, $transaction_category, $description, $amount) {
+    public function update($id, $transaction_date, $transaction_type, $transaction_category, $description, $amount, $budget_id = null, $saving_id = null, $debt_id = null) {
         $stmt = $this->conn->prepare("
             UPDATE Transaction 
-            SET transaction_date=?, transaction_type=?, transaction_category=?, description=?, amount=? 
+            SET transaction_date=?, transaction_type=?, transaction_category=?, description=?, amount=?, budget_id=?, saving_id=?, debt_id=?
             WHERE id=? AND deleted_at IS NULL
         ");
-        $stmt->bind_param("ssssds", $transaction_date, $transaction_type, $transaction_category, $description, $amount, $id);
+        $stmt->bind_param("ssssdssss", $transaction_date, $transaction_type, $transaction_category, $description, $amount, $budget_id, $saving_id, $debt_id, $id);
         return $stmt->execute();
     }
 
