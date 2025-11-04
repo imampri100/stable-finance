@@ -9,6 +9,7 @@ session_start();
 
 if (!isset($_SESSION['session_id'])) {
     header("Location: login.php");
+    session_destroy();
     exit();
 }
 
@@ -17,6 +18,12 @@ global $conn;
 
 $session_repository = new SessionRepository($conn);
 $session = $session_repository->get_by_id($_SESSION['session_id']);
+if (!$session || $session["expired_at"] < time()){
+    header("Location: login.php");
+    session_destroy();
+    exit();
+}
+
 $user_id = $session['user_id'];
 
 // check user
