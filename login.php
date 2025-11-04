@@ -108,9 +108,6 @@ if (isset($_POST['submit'])) {
                     <input type="password" id="password" placeholder="Password" name="password" required>
                     <span class="password-toggle" onclick="togglePassword('password')">Show</span>
                 </div>
-                <div class="forgot-password">
-                    <a href="#">Forget your password</a>
-                </div>
             </div>
             
             <button type="submit" class="submit-btn" name="submit">Login</button>

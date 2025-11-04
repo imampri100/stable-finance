@@ -30,7 +30,10 @@ $user_id = $session['user_id'];
 $user_repository = new UserRepository($conn);
 $user = $user_repository->get_by_id($session["user_id"]);
 if (!$user || $user["is_active"] != 1){
-    header("Location: login.php");
+    echo "<script>
+        alert('User is inactive!')
+        window.location.href = 'login.php';
+    </script>";
     session_destroy();
     exit();
 }
