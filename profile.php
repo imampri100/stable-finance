@@ -47,11 +47,6 @@ if (!$user || $user["is_active"] != 1){
     exit();
 }
 
-if ($user["role"] != ROLE_USER){
-    header("Location: index.php");
-    exit();
-}
-
 // handle submit profile
 if (isset($_POST['submit-profile'])) {
     $name = $_POST['name'];
