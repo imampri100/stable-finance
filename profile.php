@@ -329,8 +329,13 @@ if (isset($_POST['submit-password'])) {
 </head>
 <body>
 <?php
-include_once 'layout/sidebar_user_layout.php';
-sidebarUserLayout(1);
+if ($user["role"] == ROLE_ADMIN) {
+    include_once 'layout/sidebar_admin_layout.php';
+    sidebarAdminLayout(0);
+} else {
+    include_once 'layout/sidebar_user_layout.php';
+    sidebarUserLayout(0);
+}
 ?>
 
 <div class="main-content">
